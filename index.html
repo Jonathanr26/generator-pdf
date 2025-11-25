@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador Evidencia - Estructura Oficial</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #444; margin-bottom: 20px; }
+        
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 8px; background: #fafafa; }
+        .section-title { font-size: 0.9em; font-weight: bold; color: #666; margin-bottom: 10px; text-transform: uppercase; }
+        
+        label { display: block; margin-top: 10px; font-weight: 600; font-size: 0.9rem; }
+        input[type="text"], input[type="date"] { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        .file-input-wrapper { display: flex; gap: 10px; align-items: center; margin-top: 5px; }
+        input[type="file"] { font-size: 0.9rem; }
+
+        .btn-generate { background-color: #0066cc; color: white; border: none; padding: 15px; width: 100%; font-size: 1.1rem; font-weight: bold; border-radius: 5px; cursor: pointer; margin-top: 20px; transition: background 0.3s; }
+        .btn-generate:hover { background-color: #004c99; }
+
+        .note { font-size: 0.8rem; color: #888; margin-top: 5px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Generador de Reporte - Formato Oficial</h2>
+
+    <div class="section">
+        <div class="section-title">1. Datos del Reporte</div>        <label>LUGAR Y FECHA:</label>
+        <input type="text" id="fechaInput" value="18 DE SEPTIEMBRE DEL 2025">
+        
+        <label>SEDE:</label>
+        <input type="text" id="sedeInput" value="UPN COLIMA">
+
+        <label>FACILITADOR:</label>
+        <input type="text" id="facilitadorInput" value="SOFÍA IVONE VILLASEÑOR RAMÍREZ">
+
+        <label>NOMBRE DEL CURSO:</label>
+        <input type="text" id="cursoInput" value="RESIGNIFICACIÓN DE LA FUNCIÓN DIRECTIVA Y DE SUPERVISIÓN HACÍA UN LIDERAZGO PEDAGÓGICO HACÍA UN TRABAJO HORIZONTAL">
+    </div>
+
+    <div class="section">
+        <div class="section-title">2. Evidencia Fotográfica</div>
+        <label>Seleccionar Fotos:</label>
+        <input type="file" id="fotosInput" multiple accept="image/*">
+        <p class="note">Se ajustarán automáticamente a 6cm de ancho con separación.</p>
+    </div>
+
+    <button class="btn-generate" onclick="generarPDF()">DESCARGAR PDF</button>
+</div>
+
+<script>
+    // Textos fijos extraídos de tus documentos 
+    const TEXTO_TITULO = "Acciones e Intervenciones de Formación del Programa para el Desarrollo Profesional Docente tipo Básico 2025.";
+    const TEXTO_FOOTER_DIR = "Av. Gonzalo de Sandoval #760 Colonia Las Víboras C.P. 28040 Colima, Colima, México.";
+    const TEXTO_FOOTER_CONTACTO = "312 31 61500, ext. 31940, 31958, 31945. www.secolima.gob.mx. E-mail: despacho.secretario@secolima.gob.mx";
+
+    const readFile = (file) => new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+    });
+
+    async function generarPDF() {
+        const fecha = document.getElementById('fechaInput').value;
+        const sede = document.getElementById('sedeInput').value;
+        const facilitador = document.getElementById('facilitadorInput').value;
+        const curso = document.getElementById('cursoInput').value;
+        
+        // Procesar fotos de evidencia
+        const fotosFiles = document.getElementById('fotosInput').files;
+        let fotosHTML = '<table style="border-collapse: collapse;">';
+
+        if (fotosFiles.length > 0) {
+            for (let i = 0; i < fotosFiles.length; i += 3) {
+                fotosHTML += '<tr>';
+                for (let j = 0; j < 3 && i + j < fotosFiles.length; j++) {
+                    const base64 = await readFile(fotosFiles[i + j]);
+                    fotosHTML += `<td style="padding: 5px;"><img src="${base64}" style="width: 225px; height: auto;"></td>`;
+                }
+                fotosHTML += '</tr>';
+            }
+        }
+        fotosHTML += '</table>';
+
+        // Cargar el template
+        const response = await fetch('template.html');
+        let htmlContent = await response.text();
+
+        // Reemplazar placeholders
+        htmlContent = htmlContent
+            .replace(/\{\{fecha\}\}/g, fecha.toUpperCase())
+            .replace(/\{\{sede\}\}/g, sede)
+            .replace(/\{\{facilitador\}\}/g, facilitador)
+            .replace(/\{\{curso\}\}/g, curso)
+            .replace(/\{\{imagenes\}\}/g, fotosHTML);
+
+        // Crear un elemento temporal para el PDF
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        tempDiv.style.width = '612pt'; // Match the template width
+        tempDiv.style.height = '792pt'; // Match the template height
+        tempDiv.style.overflow = 'hidden'; // Prevent overflow to avoid extra pages
+
+        // Opciones para html2pdf
+        const options = {
+            margin: 0,
+            filename: 'Evidencia_Oficial.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'pt', format: [612, 792], orientation: 'portrait' } // Letter size in points
+        };
+
+        // Generar PDF
+        html2pdf().set(options).from(tempDiv).save();
+    }
+</script>
+
+</body>
+</html>
