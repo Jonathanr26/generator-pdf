@@ -76,6 +76,13 @@
         
         // Procesar fotos de evidencia
         const fotosFiles = document.getElementById('fotosInput').files;
+        
+        // Validar número máximo de imágenes para evitar desbordamiento
+        if (fotosFiles.length > 6) {
+            alert("Máximo 6 imágenes permitidas para evitar que salgan del espacio en el PDF.");
+            return;
+        }
+        
         let fotosHTML = '<table style="border-collapse: collapse;">';
 
         if (fotosFiles.length > 0) {
@@ -83,7 +90,7 @@
                 fotosHTML += '<tr>';
                 for (let j = 0; j < 3 && i + j < fotosFiles.length; j++) {
                     const base64 = await readFile(fotosFiles[i + j]);
-                    fotosHTML += `<td style="padding: 5px;"><img src="${base64}" style="width: 225px; height: auto;"></td>`;
+                    fotosHTML += `<td style="padding: 5px;"><img src="${base64}" style="width: 215px; height: auto; max-height: 250px;"></td>`;
                 }
                 fotosHTML += '</tr>';
             }
