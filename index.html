@@ -112,17 +112,9 @@
         // Crear un elemento temporal para el PDF
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = htmlContent;
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        tempDiv.style.top = '0';
         tempDiv.style.width = '612pt';
         tempDiv.style.height = '792pt';
         tempDiv.style.overflow = 'hidden';
-        tempDiv.style.margin = '0';
-        tempDiv.style.padding = '0';
-
-        // Agregar al DOM temporalmente
-        document.body.appendChild(tempDiv);
 
         // Opciones para html2pdf
         const options = {
@@ -133,22 +125,16 @@
                 scale: 2,
                 useCORS: true,
                 allowTaint: true,
-                scrollY: 0,
-                scrollX: 0,
-                windowWidth: 612,
-                windowHeight: 792,
-                x: 0,
-                y: 0,
-                logging: false,
-                backgroundColor: '#ffffff'
+                scrollY: -window.scrollY,
+                scrollX: -window.scrollX,
+                windowHeight: document.documentElement.scrollHeight,
+                y: 0
             },
             jsPDF: { unit: 'pt', format: [612, 792], orientation: 'portrait' }
         };
 
-        // Generar PDF y limpiar
-        html2pdf().set(options).from(tempDiv).save().then(() => {
-            document.body.removeChild(tempDiv);
-        });
+        // Generar PDF
+        html2pdf().set(options).from(tempDiv).save();
     }
 </script>
 
