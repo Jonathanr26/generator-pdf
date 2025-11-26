@@ -115,16 +115,13 @@
         tempDiv.style.width = '612pt'; // Match the template width
         tempDiv.style.height = '792pt'; // Match the template height
         tempDiv.style.overflow = 'hidden'; // Prevent overflow to avoid extra pages
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.top = '0';
-        tempDiv.style.left = '0';
 
         // Opciones para html2pdf
         const options = {
             margin: 0,
             filename: 'Evidencia_Oficial.pdf',
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+            html2canvas: { scale: 1, useCORS: true },
             jsPDF: { unit: 'pt', format: [612, 792], orientation: 'portrait' } // Letter size in points
         };
 
