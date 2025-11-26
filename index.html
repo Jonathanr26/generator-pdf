@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generador Evidencia - Estructura Oficial</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -109,76 +108,80 @@
             .replace(/\{\{curso\}\}/g, curso)
             .replace(/\{\{imagenes\}\}/g, fotosHTML);
 
-        // Crear iframe oculto para renderizar el contenido
-        const iframe = document.createElement('iframe');
-        iframe.style.position = 'fixed';
-        iframe.style.top = '0';
-        iframe.style.left = '0';
-        iframe.style.width = '612pt';
-        iframe.style.height = '792pt';
-        iframe.style.border = 'none';
-        iframe.style.visibility = 'hidden';
-        document.body.appendChild(iframe);
+        // Crear un contenedor temporal fuera de la vista
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-10000px';
+        tempContainer.style.top = '0';
+        tempContainer.style.width = '612pt';
+        tempContainer.style.height = '792pt';
+        tempContainer.innerHTML = htmlContent;
+        document.body.appendChild(tempContainer);
 
-        // Escribir el contenido en el iframe
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        iframeDoc.open();
-        iframeDoc.write(htmlContent);
-        iframeDoc.close();
-
-        // Esperar a que las imágenes se carguen y dar tiempo extra para el renderizado
-        setTimeout(() => {
-            const images = iframeDoc.getElementsByTagName('img');
-            const imagePromises = Array.from(images).map(img => {
-                return new Promise((resolve) => {
-                    if (img.complete) {
-                        resolve();
-                    } else {
-                        img.onload = resolve;
-                        img.onerror = resolve;
-                    }
-                });
+        // Esperar a que las imágenes se carguen
+        const images = tempContainer.getElementsByTagName('img');
+        const imagePromises = Array.from(images).map(img => {
+            return new Promise((resolve) => {
+                if (img.complete) {
+                    resolve();
+                } else {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                    // Timeout de seguridad
+                    setTimeout(resolve, 5000);
+                }
             });
+        });
 
-            Promise.all(imagePromises).then(() => {
-                // Dar tiempo adicional para que todo se renderice completamente
-                setTimeout(() => {
-                    // Obtener el elemento principal .wcpage del iframe
-                    const pageElement = iframeDoc.querySelector('.wcpage');
+        Promise.all(imagePromises).then(() => {
+            // Dar tiempo para que todo se renderice
+            setTimeout(() => {
+                const pageElement = tempContainer.querySelector('.wcpage');
 
-                    if (!pageElement) {
-                        alert('Error: No se pudo encontrar el contenido de la página');
-                        document.body.removeChild(iframe);
-                        return;
-                    }
+                if (!pageElement) {
+                    alert('Error: No se pudo encontrar el contenido de la página');
+                    document.body.removeChild(tempContainer);
+                    return;
+                }
 
-                    // Opciones para html2pdf
-                    const options = {
-                        margin: 0,
-                        filename: 'Evidencia_Oficial.pdf',
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: {
-                            scale: 2,
-                            useCORS: true,
-                            allowTaint: true,
-                            scrollY: 0,
-                            scrollX: 0,
-                            logging: false
-                        },
-                        jsPDF: { unit: 'pt', format: [612, 792], orientation: 'portrait' }
-                    };
-
-                    // Generar PDF desde el elemento .wcpage del iframe
-                    html2pdf().set(options).from(pageElement).save().then(() => {
-                        // Eliminar el iframe después de generar el PDF
-                        document.body.removeChild(iframe);
-                    }).catch((error) => {
-                        console.error('Error generando PDF:', error);
-                        document.body.removeChild(iframe);
+                // Usar html2canvas directamente con configuración optimizada
+                html2canvas(pageElement, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    width: 612,
+                    height: 792,
+                    windowWidth: 612,
+                    windowHeight: 792,
+                    x: 0,
+                    y: 0
+                }).then(canvas => {
+                    // Crear PDF usando jsPDF
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({
+                        unit: 'pt',
+                        format: [612, 792],
+                        orientation: 'portrait'
                     });
-                }, 500);
-            });
-        }, 100);
+
+                    // Convertir canvas a imagen y agregar al PDF
+                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                    pdf.addImage(imgData, 'JPEG', 0, 0, 612, 792);
+
+                    // Descargar PDF
+                    pdf.save('Evidencia_Oficial.pdf');
+
+                    // Limpiar
+                    document.body.removeChild(tempContainer);
+                }).catch(error => {
+                    console.error('Error generando PDF:', error);
+                    alert('Error al generar el PDF. Por favor intenta de nuevo.');
+                    document.body.removeChild(tempContainer);
+                });
+            }, 1000);
+        });
     }
 </script>
 
