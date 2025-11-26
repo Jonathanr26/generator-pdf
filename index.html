@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generador Evidencia - Estructura Oficial</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; }
@@ -67,121 +66,144 @@
         reader.readAsDataURL(file);
     });
 
+    // Función para cargar imágenes y obtener sus dimensiones
+    const loadImage = (src) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+    };
+
     async function generarPDF() {
         const fecha = document.getElementById('fechaInput').value;
         const sede = document.getElementById('sedeInput').value;
         const facilitador = document.getElementById('facilitadorInput').value;
         const curso = document.getElementById('cursoInput').value;
-        
+
         // Procesar fotos de evidencia
         const fotosFiles = document.getElementById('fotosInput').files;
-        
+
         // Validar número máximo de imágenes para evitar desbordamiento
         if (fotosFiles.length > 6) {
             alert("Máximo 6 imágenes permitidas para evitar que salgan del espacio en el PDF.");
             return;
         }
-        
-        let fotosHTML = '<table style="border-collapse: collapse; width: 100%;">';
 
-        if (fotosFiles.length > 0) {
-            for (let i = 0; i < fotosFiles.length; i += 3) {
-                fotosHTML += '<tr>';
-                for (let j = 0; j < 3 && i + j < fotosFiles.length; j++) {
-                    const base64 = await readFile(fotosFiles[i + j]);
-                    fotosHTML += `<td style="padding: 3px; text-align: center;"><img src="${base64}" style="width: 170px; height: auto; max-height: 200px; object-fit: contain;"></td>`;
-                }
-                fotosHTML += '</tr>';
-            }
+        // Cargar imágenes de usuario
+        const fotosBase64 = [];
+        for (let i = 0; i < fotosFiles.length; i++) {
+            const base64 = await readFile(fotosFiles[i]);
+            fotosBase64.push(base64);
         }
-        fotosHTML += '</table>';
 
-        // Cargar el template
-        const response = await fetch('template.html');
-        let htmlContent = await response.text();
-
-        // Reemplazar placeholders
-        htmlContent = htmlContent
-            .replace(/\{\{fecha\}\}/g, fecha.toUpperCase())
-            .replace(/\{\{sede\}\}/g, sede)
-            .replace(/\{\{facilitador\}\}/g, facilitador)
-            .replace(/\{\{curso\}\}/g, curso)
-            .replace(/\{\{imagenes\}\}/g, fotosHTML);
-
-        // Crear un contenedor temporal fuera de la vista
-        const tempContainer = document.createElement('div');
-        tempContainer.style.position = 'absolute';
-        tempContainer.style.left = '-10000px';
-        tempContainer.style.top = '0';
-        tempContainer.style.width = '612pt';
-        tempContainer.style.height = '792pt';
-        tempContainer.innerHTML = htmlContent;
-        document.body.appendChild(tempContainer);
-
-        // Esperar a que las imágenes se carguen
-        const images = tempContainer.getElementsByTagName('img');
-        const imagePromises = Array.from(images).map(img => {
-            return new Promise((resolve) => {
-                if (img.complete) {
-                    resolve();
-                } else {
-                    img.onload = resolve;
-                    img.onerror = resolve;
-                    // Timeout de seguridad
-                    setTimeout(resolve, 5000);
-                }
-            });
+        // Crear PDF usando jsPDF
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            unit: 'pt',
+            format: [612, 792],
+            orientation: 'portrait'
         });
 
-        Promise.all(imagePromises).then(() => {
-            // Dar tiempo para que todo se renderice
-            setTimeout(() => {
-                const pageElement = tempContainer.querySelector('.wcpage');
+        // URLs de las imágenes del template
+        const imgLogo1 = 'https://myfiles.space/user_files/temporary/692510cb9e0224.54677131/1764036810_sofi-a-villasen-or-s1-g1-resignificacio-n-de-la-funcio-n-directiv/1764036810_sofi-a-villasen-or-s1-g1-resignificacio-n-de-la-funcio-n-directiv-1.jpeg';
+        const imgLogo2 = 'https://myfiles.space/user_files/temporary/692510cb9e0224.54677131/1764036810_sofi-a-villasen-or-s1-g1-resignificacio-n-de-la-funcio-n-directiv/1764036810_sofi-a-villasen-or-s1-g1-resignificacio-n-de-la-funcio-n-directiv-2.png';
+        const imgLogo3 = 'https://myfiles.space/user_files/temporary/692510cb9e0224.54677131/1764036810_sofi-a-villasen-or-s1-g1-resignificacio-n-de-la-funcio-n-directiv/1764036810_sofi-a-villasen-or-s1-g1-resignificacio-n-de-la-funcio-n-directiv-3.png';
 
-                if (!pageElement) {
-                    alert('Error: No se pudo encontrar el contenido de la página');
-                    document.body.removeChild(tempContainer);
-                    return;
+        try {
+            // Cargar imágenes del template
+            await loadImage(imgLogo1);
+            await loadImage(imgLogo2);
+            await loadImage(imgLogo3);
+
+            // Agregar imagen de fondo/marco
+            pdf.addImage(imgLogo1, 'JPEG', 4.5, 103.15, 602.25, 701.25);
+
+            // Agregar logos del header
+            pdf.addImage(imgLogo2, 'PNG', 21, 35.2, 492.44, 65.95);
+            pdf.addImage(imgLogo3, 'PNG', 519.15, 41.8, 56.65, 56.65);
+
+            // Agregar título principal
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text('Acciones e Intervenciones de Formación del ', 28.35, 127.4);
+            pdf.setFont('helvetica', 'italic');
+            pdf.text('Programa para el Desarrollo Profesional Docente tipo Básico 2025.', 250.58, 127.4);
+
+            // Agregar rectángulo contenedor
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.75);
+            pdf.rect(28.78, 147.5, 554.45, 541.26);
+
+            // Línea horizontal para separar header de contenido
+            pdf.line(29.03, 266.41, 582.48, 266.41);
+
+            // Agregar datos del curso
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(10);
+            pdf.text(`LUGAR Y FECHA: ${fecha.toUpperCase()}`, 34.78, 160.1);
+            pdf.text(`SEDE: ${sede}`, 34.78, 191.84);
+            pdf.text(`FACILITADOR: ${facilitador}`, 34.78, 204.05);
+
+            // Manejar texto largo del curso con word wrap
+            const cursoText = `NOMBRE DEL CURSO: ${curso}`;
+            const splitCurso = pdf.splitTextToSize(cursoText, 540);
+            pdf.text(splitCurso, 34.78, 225.79);
+
+            // Título de evidencia fotográfica
+            pdf.text('EVIDENCIA FOTOGRÁFICA:', 34.78, 273.51);
+
+            // Agregar fotos de evidencia en grid 3x2
+            if (fotosBase64.length > 0) {
+                const imgWidth = 170;
+                const imgHeight = 150;
+                const marginX = 50;
+                const marginY = 290;
+                const spacingX = 10;
+                const spacingY = 10;
+
+                for (let i = 0; i < fotosBase64.length; i++) {
+                    const col = i % 3;
+                    const row = Math.floor(i / 3);
+                    const x = marginX + (col * (imgWidth + spacingX));
+                    const y = marginY + (row * (imgHeight + spacingY));
+
+                    // Cargar y agregar imagen
+                    const img = await loadImage(fotosBase64[i]);
+                    const imgRatio = img.width / img.height;
+                    let finalWidth = imgWidth;
+                    let finalHeight = imgHeight;
+
+                    // Ajustar dimensiones manteniendo aspecto
+                    if (imgRatio > imgWidth / imgHeight) {
+                        finalHeight = imgWidth / imgRatio;
+                    } else {
+                        finalWidth = imgHeight * imgRatio;
+                    }
+
+                    // Centrar imagen en su celda
+                    const xOffset = (imgWidth - finalWidth) / 2;
+                    const yOffset = (imgHeight - finalHeight) / 2;
+
+                    pdf.addImage(fotosBase64[i], 'JPEG', x + xOffset, y + yOffset, finalWidth, finalHeight);
                 }
+            }
 
-                // Configuración optimizada para capturar exactamente 612x792pt
-                html2canvas(pageElement, {
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff',
-                    logging: false,
-                    scrollY: 0,
-                    scrollX: 0,
-                    width: 612,
-                    height: 792
-                }).then(canvas => {
-                    // Crear PDF usando jsPDF
-                    const { jsPDF } = window.jspdf;
-                    const pdf = new jsPDF({
-                        unit: 'pt',
-                        format: [612, 792],
-                        orientation: 'portrait'
-                    });
+            // Agregar footer
+            pdf.setFontSize(8);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(64, 64, 64);
+            pdf.text('Av. Gonzalo de Sandoval #760 Colonia Las Víboras C.P. 28040 Colima, Colima, México.', 154.3, 762);
+            pdf.text('312 31 61500, ext. 31940, 31958, 31945. www.secolima.gob.mx. E-mail: despacho.secretario@secolima.gob.mx', 117.86, 771.2);
 
-                    // Convertir canvas a imagen
-                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            // Descargar PDF
+            pdf.save('Evidencia_Oficial.pdf');
 
-                    // Agregar imagen al PDF ocupando toda la página
-                    pdf.addImage(imgData, 'JPEG', 0, 0, 612, 792);
-
-                    // Descargar PDF
-                    pdf.save('Evidencia_Oficial.pdf');
-
-                    // Limpiar
-                    document.body.removeChild(tempContainer);
-                }).catch(error => {
-                    console.error('Error generando PDF:', error);
-                    alert('Error al generar el PDF. Por favor intenta de nuevo.');
-                    document.body.removeChild(tempContainer);
-                });
-            }, 1000);
-        });
+        } catch (error) {
+            console.error('Error generando PDF:', error);
+            alert('Error al generar el PDF. Verifica tu conexión a internet para cargar los logos.');
+        }
     }
 </script>
 
