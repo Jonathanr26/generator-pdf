@@ -82,14 +82,14 @@
             return;
         }
         
-        let fotosHTML = '<table style="border-collapse: collapse;">';
+        let fotosHTML = '<table style="border-collapse: collapse; width: 100%;">';
 
         if (fotosFiles.length > 0) {
             for (let i = 0; i < fotosFiles.length; i += 3) {
                 fotosHTML += '<tr>';
                 for (let j = 0; j < 3 && i + j < fotosFiles.length; j++) {
                     const base64 = await readFile(fotosFiles[i + j]);
-                    fotosHTML += `<td style="padding: 5px;"><img src="${base64}" style="width: 215px; height: auto; max-height: 250px;"></td>`;
+                    fotosHTML += `<td style="padding: 3px; text-align: center;"><img src="${base64}" style="width: 170px; height: auto; max-height: 200px; object-fit: contain;"></td>`;
                 }
                 fotosHTML += '</tr>';
             }
@@ -144,19 +144,17 @@
                     return;
                 }
 
-                // Usar html2canvas directamente con configuración optimizada
+                // Configuración optimizada para capturar exactamente 612x792pt
                 html2canvas(pageElement, {
                     scale: 2,
                     useCORS: true,
                     allowTaint: true,
                     backgroundColor: '#ffffff',
                     logging: false,
+                    scrollY: 0,
+                    scrollX: 0,
                     width: 612,
-                    height: 792,
-                    windowWidth: 612,
-                    windowHeight: 792,
-                    x: 0,
-                    y: 0
+                    height: 792
                 }).then(canvas => {
                     // Crear PDF usando jsPDF
                     const { jsPDF } = window.jspdf;
@@ -166,8 +164,10 @@
                         orientation: 'portrait'
                     });
 
-                    // Convertir canvas a imagen y agregar al PDF
+                    // Convertir canvas a imagen
                     const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+                    // Agregar imagen al PDF ocupando toda la página
                     pdf.addImage(imgData, 'JPEG', 0, 0, 612, 792);
 
                     // Descargar PDF
