@@ -109,32 +109,58 @@
             .replace(/\{\{curso\}\}/g, curso)
             .replace(/\{\{imagenes\}\}/g, fotosHTML);
 
-        // Crear un elemento temporal para el PDF
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = htmlContent;
-        tempDiv.style.width = '612pt';
-        tempDiv.style.height = '792pt';
-        tempDiv.style.overflow = 'hidden';
+        // Crear iframe oculto para renderizar el contenido
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        iframe.style.width = '612pt';
+        iframe.style.height = '792pt';
+        iframe.style.border = 'none';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
 
-        // Opciones para html2pdf
-        const options = {
-            margin: 0,
-            filename: 'Evidencia_Oficial.pdf',
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                scrollY: -window.scrollY,
-                scrollX: -window.scrollX,
-                windowHeight: document.documentElement.scrollHeight,
-                y: 0
-            },
-            jsPDF: { unit: 'pt', format: [612, 792], orientation: 'portrait' }
-        };
+        // Escribir el contenido en el iframe
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(htmlContent);
+        iframeDoc.close();
 
-        // Generar PDF
-        html2pdf().set(options).from(tempDiv).save();
+        // Esperar a que las imágenes se carguen
+        const images = iframeDoc.getElementsByTagName('img');
+        const imagePromises = Array.from(images).map(img => {
+            return new Promise((resolve) => {
+                if (img.complete) {
+                    resolve();
+                } else {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                }
+            });
+        });
+
+        Promise.all(imagePromises).then(() => {
+            // Opciones para html2pdf
+            const options = {
+                margin: 0,
+                filename: 'Evidencia_Oficial.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    scrollY: 0,
+                    scrollX: 0
+                },
+                jsPDF: { unit: 'pt', format: [612, 792], orientation: 'portrait' }
+            };
+
+            // Generar PDF desde el body del iframe
+            html2pdf().set(options).from(iframeDoc.body).save().then(() => {
+                // Eliminar el iframe después de generar el PDF
+                document.body.removeChild(iframe);
+            });
+        });
     }
 </script>
 
